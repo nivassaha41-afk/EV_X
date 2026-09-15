@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EVCharge_X - Charging & Booking History</title>
+  <link rel="stylesheet" href="css/app-theme.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    .history-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      margin-bottom: 16px;
+      transition: all 0.2s ease;
+    }
+    .history-card:hover {
+      box-shadow: var(--shadow-md);
+      border-color: var(--primary);
+    }
+    .history-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-top: 12px;
+    }
+    .label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .value {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--dark);
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: var(--radius-pill);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .status-confirmed { background: var(--primary-lighter); color: var(--primary-dark); }
+    .status-cancelled { background: #fee2e2; color: #991b1b; }
+    .empty-card {
+      background: var(--lighter);
+      border: 1.5px dashed var(--border);
+      border-radius: var(--radius-md);
+      padding: 40px 24px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 15px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ========== TOP NAVIGATION ========== -->
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a href="home.html" class="nav-brand">
+        <i class="fas fa-bolt"></i> EVCharge<span>_X</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="home.html"><i class="fas fa-home"></i> Home</a></li>
+        <li><a href="find.html"><i class="fas fa-map-marker-alt"></i> Stations</a></li>
+        <li><a href="calender.html"><i class="fas fa-calendar-alt"></i> Bookings</a></li>
+        <li><a href="payment.html"><i class="fas fa-wallet"></i> Payments</a></li>
+        <li><a href="history.html" class="active"><i class="fas fa-clock"></i> History</a></li>
+      </ul>
+      <div class="nav-actions">
+        <a href="index.html" class="nav-login-btn" id="authBtn">
+          <i class="fas fa-user"></i> Login <i class="fas fa-chevron-down" style="font-size:10px;margin-left:2px;"></i>
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ========== SUBPAGE HERO ========== -->
+  <section class="subpage-hero">
+    <div class="subpage-hero-inner">
+      <h1><i class="fas fa-clock-rotate-left"></i> Session & Payment History</h1>
+      <p>Track your past charging slot reservations and wallet recharge transactions in real-time.</p>
+    </div>
+  </section>
+
+  <!-- ========== MAIN CONTENT ========== -->
+  <div class="page-container">
+    <div class="grid-2 gap-grid" style="align-items: flex-start;">
+      
+      <!-- Recent Bookings Section -->
+      <div class="content-card">
+        <div class="card-title">
+          <i class="fas fa-calendar-check"></i> Charging Slot Bookings
+        </div>
+        <div id="bookingsHistory"></div>
+      </div>
+
+      <!-- Recharge Transactions Section -->
+      <div class="content-card">
+        <div class="card-title">
+          <i class="fas fa-wallet"></i> Recharge & Wallet Transactions
+        </div>
+        <div id="rechargeHistory"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========== FOOTER ========== -->
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-brand"><i class="fas fa-bolt"></i> EVCharge_X</div>
+      <div class="footer-links">
+        <a href="find.html">Stations</a>
+        <a href="calender.html">Bookings</a>
+        <a href="payment.html">Payments</a>
+        <a href="history.html">History</a>
+        <a href="profile.html">Profile</a>
+      </div>
+      <div class="footer-copy">&copy; 2025 EVCharge_X. All rights reserved.</div>
+    </div>
+  </footer>
+
+  <script src="backend.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        const profile = await EVChargeApp.getUserProfile();
+        if (profile && profile.fullName) {
+          const btn = document.getElementById('authBtn');
+          btn.innerHTML = `<i class="fas fa-user-check"></i> ${profile.fullName.split(' ')[0]}`;
+          btn.href = 'profile.html';
+        }
+      } catch(e) {}
+    });
+
+    function formatDate(dateValue) {
+      if (!dateValue) return 'N/A';
+      return new Date(dateValue).toLocaleString([], { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+
+    function renderBookings() {
+      const container = document.getElementById('bookingsHistory');
+      const bookings = EVChargeApp.getBookings() || [];
+      if (!bookings.length) {
+        container.innerHTML = '<div class="empty-card"><i class="fas fa-calendar-xmark" style="font-size:28px;margin-bottom:8px;display:block;"></i>No bookings found yet.</div>';
+        return;
+      }
+      container.innerHTML = bookings.map((booking) => `
+        <div class="history-card">
+          <div class="history-row">
+            <div>
+              <div class="label">Station</div>
+              <div class="value">${booking.stationName || 'EV Station'}</div>
+            </div>
+            <div>
+              <div class="label">Date & Time</div>
+              <div class="value">${booking.date || 'Today'} · ${booking.slotTime || 'Flexible'}</div>
+            </div>
+          </div>
+          <div class="history-row">
+            <div>
+              <div class="label">Location</div>
+              <div class="value">${booking.location || 'Nearby'}</div>
+            </div>
+            <div>
+              <div class="label">Charger</div>
+              <div class="value">${booking.chargerType || 'Fast Charger'}</div>
+            </div>
+          </div>
+          <div class="history-row">
+            <div>
+              <div class="label">Amount</div>
+              <div class="value">${booking.amount || '₹150'}</div>
+            </div>
+            <div>
+              <div class="label">Status</div>
+              <div class="value"><span class="status-badge ${booking.status === 'Cancelled' ? 'status-cancelled' : 'status-confirmed'}"><i class="fas fa-circle-check"></i> ${booking.status || 'Confirmed'}</span></div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function getStoredTransactions() {
+      try {
+        const raw = localStorage.getItem('evcharge_transactions');
+        return raw ? JSON.parse(raw) : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function renderRechargeHistory() {
+      const container = document.getElementById('rechargeHistory');
+      const transactions = getStoredTransactions();
+      if (!transactions.length) {
+        container.innerHTML = '<div class="empty-card"><i class="fas fa-receipt" style="font-size:28px;margin-bottom:8px;display:block;"></i>No recharge history available yet.</div>';
+        return;
+      }
+      container.innerHTML = transactions.map(tx => `
+        <div class="history-card">
+          <div class="history-row">
+            <div>
+              <div class="label">Amount</div>
+              <div class="value" style="color:var(--primary-dark)">₹${tx.amount}</div>
+            </div>
+            <div>
+              <div class="label">Method</div>
+              <div class="value">${tx.method}</div>
+            </div>
+          </div>
+          <div class="history-row">
+            <div>
+              <div class="label">Coins Earned</div>
+              <div class="value" style="color:var(--accent)">+ ${tx.coins} Coins</div>
+            </div>
+            <div>
+              <div class="label">Date</div>
+              <div class="value">${formatDate(tx.date)}</div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    window.addEventListener('DOMContentLoaded', function() {
+      renderBookings();
+      renderRechargeHistory();
+    });
+  </script>
+</body>
+</html>

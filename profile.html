@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EVCharge_X - User Profile</title>
+  <link rel="stylesheet" href="css/app-theme.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    .profile-card-grid {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 24px;
+      align-items: flex-start;
+    }
+
+    .profile-avatar-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 32px 24px;
+      text-align: center;
+    }
+
+    .avatar-wrapper {
+      position: relative;
+      width: 90px;
+      height: 90px;
+      margin: 0 auto 16px;
+    }
+
+    .avatar-box {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      display: grid;
+      place-items: center;
+      color: var(--white);
+      font-size: 36px;
+      box-shadow: var(--shadow-green);
+    }
+
+    .online-badge {
+      position: absolute;
+      bottom: 2px;
+      right: 2px;
+      width: 18px;
+      height: 18px;
+      background: var(--primary);
+      border: 3px solid var(--white);
+      border-radius: 50%;
+    }
+
+    .user-name {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--dark);
+      margin-bottom: 4px;
+    }
+
+    .user-subtitle {
+      font-size: 14px;
+      color: var(--muted);
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+
+    .auth-banner-small {
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      color: var(--white);
+      text-align: left;
+      margin-bottom: 20px;
+    }
+
+    .auth-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--primary);
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .auth-val {
+      font-size: 16px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .copy-btn {
+      background: rgba(255,255,255,0.15);
+      border: none;
+      color: var(--white);
+      padding: 4px 10px;
+      border-radius: var(--radius-pill);
+      font-size: 11px;
+      cursor: pointer;
+      font-weight: 700;
+      transition: background 0.2s;
+    }
+    .copy-btn:hover { background: rgba(255,255,255,0.3); }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px dashed var(--border);
+      font-size: 14px;
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-label { color: var(--muted); font-weight: 500; }
+    .info-value { color: var(--dark); font-weight: 700; }
+
+    .action-grid-3 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .action-card-item {
+      background: var(--lighter);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px 12px;
+      text-align: center;
+      text-decoration: none;
+      color: var(--dark);
+      font-weight: 700;
+      font-size: 13px;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .action-card-item i {
+      font-size: 22px;
+      color: var(--primary);
+    }
+
+    .action-card-item:hover {
+      border-color: var(--primary);
+      background: var(--primary-lighter);
+      transform: translateY(-2px);
+    }
+
+    .logout-btn-lg {
+      width: 100%;
+      height: 48px;
+      background: #fee2e2;
+      color: #dc2626;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+    .logout-btn-lg:hover { background: #fca5a5; }
+
+    @media (max-width: 800px) {
+      .profile-card-grid { grid-template-columns: 1fr; }
+      .action-grid-3 { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ========== TOP NAVIGATION ========== -->
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a href="home.html" class="nav-brand">
+        <i class="fas fa-bolt"></i> EVCharge<span>_X</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="home.html"><i class="fas fa-home"></i> Home</a></li>
+        <li><a href="find.html"><i class="fas fa-map-marker-alt"></i> Stations</a></li>
+        <li><a href="calender.html"><i class="fas fa-calendar-alt"></i> Bookings</a></li>
+        <li><a href="payment.html"><i class="fas fa-wallet"></i> Payments</a></li>
+        <li><a href="history.html"><i class="fas fa-clock"></i> History</a></li>
+      </ul>
+      <div class="nav-actions">
+        <a href="profile.html" class="nav-login-btn" id="authBtn">
+          <i class="fas fa-user-check"></i> Profile
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ========== SUBPAGE HERO ========== -->
+  <section class="subpage-hero">
+    <div class="subpage-hero-inner">
+      <h1><i class="fas fa-user-gear"></i> Driver Profile & EV Settings</h1>
+      <p>View your registered vehicle credentials, authentication token, and account options.</p>
+    </div>
+  </section>
+
+  <!-- ========== MAIN CONTENT ========== -->
+  <div class="page-container">
+    
+    <div class="profile-card-grid">
+      
+      <!-- Left: Driver Avatar & Auth ID -->
+      <div class="profile-avatar-card">
+        <div class="avatar-wrapper">
+          <div class="avatar-box">
+            <i class="fas fa-user"></i>
+          </div>
+          <div class="online-badge"></div>
+        </div>
+        <h2 class="user-name" id="profileName">EV Driver</h2>
+        <p class="user-subtitle" id="profileMobile">+91 98765 43210</p>
+
+        <div class="auth-banner-small">
+          <div class="auth-label"><i class="fas fa-shield-halved"></i> Authentication ID</div>
+          <div class="auth-val">
+            <span id="profileAuthId">EVX-AUTH-1001</span>
+            <button class="copy-btn" onclick="copyAuthId()"><i class="far fa-copy"></i> Copy</button>
+          </div>
+        </div>
+
+        <button class="logout-btn-lg" onclick="logoutUser()">
+          <i class="fas fa-right-from-bracket"></i> Logout Account
+        </button>
+      </div>
+
+      <!-- Right: Registered Details & Quick Actions -->
+      <div>
+        <div class="content-card mb-4">
+          <div class="card-title">
+            <i class="fas fa-car" style="color:var(--primary);"></i> Registered EV Vehicle Info
+          </div>
+          <div class="info-row">
+            <span class="info-label">Vehicle Number</span>
+            <span class="info-value" id="profileVehicle">TN-38-EV-2024</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Chassis Number</span>
+            <span class="info-value" id="profileChassis">CH-9876543210</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Registration Date</span>
+            <span class="info-value" id="profileRegDate">28/07/2026</span>
+          </div>
+        </div>
+
+        <!-- Quick Navigation -->
+        <div class="content-card">
+          <div class="card-title">
+            <i class="fas fa-grid-2"></i> Dashboard Shortcuts
+          </div>
+          <div class="action-grid-3">
+            <a href="book.html" class="action-card-item">
+              <i class="fas fa-receipt"></i>
+              <span>My Bookings</span>
+            </a>
+            <a href="scanner.html" class="action-card-item">
+              <i class="fas fa-qrcode"></i>
+              <span>QR Scanner</span>
+            </a>
+            <a href="payment.html" class="action-card-item">
+              <i class="fas fa-wallet"></i>
+              <span>Wallet & Pay</span>
+            </a>
+            <a href="calender.html" class="action-card-item">
+              <i class="fas fa-calendar-plus"></i>
+              <span>Book Slot</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- ========== FOOTER ========== -->
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-brand"><i class="fas fa-bolt"></i> EVCharge_X</div>
+      <div class="footer-links">
+        <a href="find.html">Stations</a>
+        <a href="calender.html">Bookings</a>
+        <a href="payment.html">Payments</a>
+        <a href="history.html">History</a>
+        <a href="profile.html">Profile</a>
+      </div>
+      <div class="footer-copy">&copy; 2025 EVCharge_X. All rights reserved.</div>
+    </div>
+  </footer>
+
+  <script src="backend.js"></script>
+  <script>
+    window.addEventListener('DOMContentLoaded', async function() {
+      await EVChargeApp._initializeStorage();
+      const user = EVChargeApp.getUserProfile();
+      if (user) {
+        document.getElementById('profileName').innerText = user.fullName || 'EV Driver';
+        document.getElementById('profileMobile').innerText = user.mobileNumber ? '+91 ' + user.mobileNumber : user.email || 'driver@evcharge.com';
+        document.getElementById('profileAuthId').innerText = user.evID || 'EVX-AUTH-1001';
+        document.getElementById('profileVehicle').innerText = user.vehicleNumber || 'TN-38-EV-2024';
+        document.getElementById('profileChassis').innerText = user.chassisNumber || 'CH-9876543210';
+        document.getElementById('profileRegDate').innerText = user.registeredAt || '28/07/2026';
+      }
+    });
+
+    function copyAuthId() {
+      const authId = document.getElementById('profileAuthId').innerText;
+      navigator.clipboard.writeText(authId);
+      alert('✓ Authentication ID copied to clipboard: ' + authId);
+    }
+
+    function logoutUser() {
+      if (confirm('Are you sure you want to logout?')) {
+        EVChargeApp.logout();
+      }
+    }
+  </script>
+</body>
+</html>

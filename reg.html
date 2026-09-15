@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EVCharge_X - Register</title>
+  <link rel="stylesheet" href="css/app-theme.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body class="auth-page">
+
+  <div class="auth-wrapper">
+    <div class="auth-card-grey" style="max-width: 440px;">
+      <h2>Create Account</h2>
+      <p class="auth-subtitle">Register your EV driver account & generate Auth ID</p>
+
+      <form onsubmit="registerUser(event)">
+        <div style="margin-bottom: 14px;">
+          <input id="fullNameInput" type="text" class="form-control-white" placeholder="Driver Full Name" required>
+        </div>
+
+        <div style="margin-bottom: 14px;">
+          <input id="vehicleInput" type="text" class="form-control-white" placeholder="Vehicle Reg Number (e.g. TN-38-EV-2024)" required>
+        </div>
+
+        <div style="margin-bottom: 14px;">
+          <input id="chassisInput" type="text" class="form-control-white" placeholder="Chassis Number" required>
+        </div>
+
+        <div style="margin-bottom: 14px;">
+          <input id="emailInput" type="email" class="form-control-white" placeholder="Email Address" required>
+        </div>
+
+        <div style="margin-bottom: 14px;">
+          <input id="mobileInput" type="tel" class="form-control-white" placeholder="Mobile Number" required>
+        </div>
+
+        <button type="submit" class="btn-auth-white">
+          Register Account
+        </button>
+
+        <div class="auth-footer-text">
+          Already registered? <a href="index.html">Sign In</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Success Modal -->
+  <div class="modal-overlay" id="successModal">
+    <div class="modal-box">
+      <div class="modal-icon">
+        <i class="fas fa-circle-check"></i>
+      </div>
+      <h3 style="font-size:20px;font-weight:800;color:var(--dark);margin-bottom:6px;">Registration Complete!</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Your Unique Authentication ID has been generated:</p>
+      
+      <div style="background:var(--primary-lighter);color:var(--primary-dark);padding:10px 16px;border-radius:var(--radius-pill);font-size:18px;font-weight:800;margin-bottom:14px;" id="generatedAuthId">EVX-AUTH-1234</div>
+      
+      <p style="font-size:13px;color:var(--primary-dark);font-weight:700;margin-bottom:16px;">
+        <i class="fas fa-shield-halved"></i> Saved to local profile & digital pass scanner
+      </p>
+
+      <div class="modal-actions">
+        <button class="modal-btn secondary" onclick="viewQRCode()">QR Scanner</button>
+        <button class="modal-btn primary" onclick="proceedToLogin()">Proceed to Login</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="backend.js"></script>
+  <script>
+    const API_BASE = 'http://127.0.0.1:8080';
+
+    async function registerUser(e) {
+      e.preventDefault();
+
+      const fullName = document.getElementById('fullNameInput').value.trim();
+      const chassisNumber = document.getElementById('chassisInput').value.trim();
+      const vehicleNumber = document.getElementById('vehicleInput').value.trim();
+      const email = document.getElementById('emailInput').value.trim();
+      const mobileNumber = document.getElementById('mobileInput').value.trim();
+
+      if (!fullName || !chassisNumber || !vehicleNumber || !email || !mobileNumber) {
+        alert('Please fill in all the required fields.');
+        return;
+      }
+
+      const payload = {
+        fullName,
+        chassisNumber,
+        vehicleNumber,
+        email,
+        mobileNumber
+      };
+
+      let registeredId = '';
+
+      try {
+        const response = await fetch(`${API_BASE}/api/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+          const data = await response.json().catch(() => ({}));
+          registeredId = data.user?.evID || '';
+        } else {
+          const errData = await response.json().catch(() => ({}));
+          if (errData.error) {
+            console.warn('Registration Server Note:', errData.error);
+          }
+        }
+      } catch (err) {
+        console.info('Node server offline, registering in local database...');
+      }
+
+      await EVChargeApp._initializeStorage();
+      const profile = EVChargeApp.saveUserProfile({
+        ...payload,
+        evID: registeredId
+      });
+
+      document.getElementById('generatedAuthId').innerText = profile.evID;
+      document.getElementById('successModal').style.display = 'flex';
+    }
+
+    function viewQRCode() {
+      window.location.href = 'scanner.html';
+    }
+
+    function proceedToLogin() {
+      window.location.href = 'index.html';
+    }
+  </script>
+</body>
+</html>

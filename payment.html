@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EVCharge_X - Wallet & Payments</title>
+  <link rel="stylesheet" href="css/app-theme.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    .wallet-banner-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .wallet-card {
+      padding: 24px;
+      border-radius: var(--radius-md);
+      color: var(--white);
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--shadow-md);
+    }
+    .wallet-card.ev-card {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    }
+    .wallet-card.balance-card {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-darker) 100%);
+    }
+    .wallet-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      opacity: 0.85;
+      margin-bottom: 6px;
+    }
+    .wallet-val {
+      font-size: 26px;
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+    .wallet-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,0.2);
+      padding: 4px 12px;
+      border-radius: var(--radius-pill);
+      font-size: 12px;
+      font-weight: 700;
+      backdrop-filter: blur(4px);
+    }
+
+    .quick-amounts {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .amount-btn {
+      background: var(--lighter);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--dark);
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .amount-btn:hover, .amount-btn.active {
+      background: var(--primary-lighter);
+      border-color: var(--primary);
+      color: var(--primary-dark);
+    }
+
+    .payment-methods {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .payment-option {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: var(--lighter);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--dark);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .payment-option:hover, .payment-option.active {
+      background: var(--primary-lighter);
+      border-color: var(--primary);
+      color: var(--primary-dark);
+    }
+
+    .conversion-box {
+      background: var(--lighter);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .transaction-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .transaction-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--lighter);
+      border: 1px solid var(--border);
+      padding: 14px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+    }
+    .tx-left { display: flex; align-items: center; gap: 10px; font-weight: 600; color: var(--dark); }
+    .tx-left i { color: var(--primary-dark); background: var(--primary-lighter); padding: 6px; border-radius: 50%; font-size: 12px; }
+    .tx-right { font-weight: 700; color: var(--primary-dark); }
+  </style>
+</head>
+<body>
+
+  <!-- ========== TOP NAVIGATION ========== -->
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a href="home.html" class="nav-brand">
+        <i class="fas fa-bolt"></i> EVCharge<span>_X</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="home.html"><i class="fas fa-home"></i> Home</a></li>
+        <li><a href="find.html"><i class="fas fa-map-marker-alt"></i> Stations</a></li>
+        <li><a href="calender.html"><i class="fas fa-calendar-alt"></i> Bookings</a></li>
+        <li><a href="payment.html" class="active"><i class="fas fa-wallet"></i> Payments</a></li>
+        <li><a href="history.html"><i class="fas fa-clock"></i> History</a></li>
+      </ul>
+      <div class="nav-actions">
+        <a href="index.html" class="nav-login-btn" id="authBtn">
+          <i class="fas fa-user"></i> Login <i class="fas fa-chevron-down" style="font-size:10px;margin-left:2px;"></i>
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ========== SUBPAGE HERO ========== -->
+  <section class="subpage-hero">
+    <div class="subpage-hero-inner">
+      <h1><i class="fas fa-wallet"></i> EVCharge Wallet & Instant Recharge</h1>
+      <p>Manage your charging coins, top up wallet via UPI/GPay/Loan Wallet, and inspect recent payments.</p>
+    </div>
+  </section>
+
+  <!-- ========== MAIN CONTENT ========== -->
+  <div class="page-container">
+
+    <!-- Top Cards Banner -->
+    <div class="wallet-banner-grid">
+      <div class="wallet-card ev-card">
+        <div class="wallet-label">Unique EV Auth ID</div>
+        <div class="wallet-val" id="evIDText">EVX-AUTH-1001</div>
+        <div class="wallet-chip"><i class="fas fa-shield-check"></i> Verified Driver</div>
+      </div>
+      <div class="wallet-card balance-card">
+        <div class="wallet-label">Available Wallet Balance</div>
+        <div class="wallet-val" id="balanceText">🪙 250</div>
+        <div class="wallet-chip"><i class="fas fa-coins"></i> EV Recharge Coins</div>
+      </div>
+    </div>
+
+    <!-- Main 2-Column Layout -->
+    <div class="grid-2 gap-grid" style="align-items: flex-start;">
+      
+      <!-- Left Column: Recharge Form -->
+      <div class="content-card">
+        <div class="card-title">
+          <i class="fas fa-credit-card"></i> Top-Up Wallet Coins
+        </div>
+
+        <div style="margin-bottom:16px;">
+          <label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:6px;">Recharge Amount (₹)</label>
+          <div class="form-group mb-4">
+            <span class="input-icon"><i class="fas fa-indian-rupee-sign"></i></span>
+            <input type="number" id="amountInput" class="form-control" value="250" placeholder="Enter amount">
+          </div>
+        </div>
+
+        <label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:8px;">Quick Top-Up Options</label>
+        <div class="quick-amounts">
+          <button class="amount-btn" onclick="selectAmount(100, event)">₹100</button>
+          <button class="amount-btn active" onclick="selectAmount(250, event)">₹250</button>
+          <button class="amount-btn" onclick="selectAmount(500, event)">₹500</button>
+          <button class="amount-btn" onclick="selectAmount(1000, event)">₹1000</button>
+        </div>
+
+        <div class="conversion-box">
+          <div><i class="fas fa-coins" style="color:#eab308;margin-right:4px;"></i> ₹100 = 100 EV Coins</div>
+          <div>Instant Credit</div>
+        </div>
+
+        <label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:8px;">Payment / Loan Mode</label>
+        <div class="payment-methods" id="paymentMethods">
+          <button class="payment-option active" onclick="selectPaymentMethod('GPay', event)"><i class="fab fa-google"></i> GPay</button>
+          <button class="payment-option" onclick="selectPaymentMethod('PhonePe', event)"><i class="fas fa-hand-holding-dollar"></i> PhonePe</button>
+          <button class="payment-option" onclick="selectPaymentMethod('Paytm', event)"><i class="fas fa-wallet"></i> Paytm</button>
+          <button class="payment-option" onclick="selectPaymentMethod('Loan Wallet', event)"><i class="fas fa-landmark"></i> Loan</button>
+        </div>
+
+        <div class="toast-msg" id="toastMsg" style="padding:10px;background:var(--primary-lighter);color:var(--primary-dark);border-radius:var(--radius-sm);margin-bottom:14px;display:none;text-align:center;font-weight:700;font-size:13px;"></div>
+        <div class="toast-msg" id="errorMsg" style="padding:10px;background:#fef2f2;color:#991b1b;border-radius:var(--radius-sm);margin-bottom:14px;display:none;text-align:center;font-weight:700;font-size:13px;"></div>
+
+        <button class="btn-primary" id="paymentActionButton" onclick="proceedToPayment()">
+          <i class="fab fa-google-pay" style="font-size: 20px;"></i> Pay with GPay
+        </button>
+
+      </div>
+
+      <!-- Right Column: Recent Transactions -->
+      <div class="content-card">
+        <div class="card-title">
+          <i class="fas fa-receipt"></i> Recent Wallet Activity <span id="rechargeCount" style="font-size: 13px; font-weight: 700; color: var(--primary-dark); margin-left: auto;">(0)</span>
+        </div>
+        <div class="transaction-list" id="transactionList"></div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- GPay / Payment Modal -->
+  <div class="modal-overlay" id="gpayOverlay">
+    <div class="modal-box">
+      <div class="modal-icon">
+        <i class="fas fa-lock"></i>
+      </div>
+      <div id="paymentMethodLabel" style="font-size:18px;font-weight:800;color:var(--dark);margin-bottom:8px;"><i class="fab fa-google"></i> GPay</div>
+      
+      <div style="background:var(--lighter);padding:14px;border-radius:var(--radius-sm);margin-bottom:16px;text-align:center;">
+        <div style="font-size:12px;color:var(--muted);font-weight:600;">Merchant Payment</div>
+        <div style="font-size:14px;font-weight:700;color:var(--dark);">EVCharge_X Services</div>
+        <div style="font-size:24px;font-weight:800;color:var(--primary-dark);margin-top:4px;" id="gpayAmountText">₹250.00</div>
+      </div>
+
+      <div style="margin-bottom: 16px; text-align: left;">
+        <label id="confirmLabel" style="font-size:12px;font-weight:700;color:var(--muted);">Confirm your payment</label>
+        <p id="confirmText" style="font-size: 13px; color: var(--muted); margin-top: 4px;">Coins will be added to your wallet after payment is confirmed.</p>
+      </div>
+
+      <button class="btn-primary" id="confirmPaymentButton" onclick="confirmPayment()">
+        <i class="fas fa-lock"></i> Pay Securely
+      </button>
+      <button onclick="closeGPay()" style="width: 100%; background: none; border: none; color: var(--muted); font-size: 13px; margin-top: 12px; cursor: pointer; font-weight: 600;">Cancel</button>
+    </div>
+  </div>
+
+  <!-- ========== FOOTER ========== -->
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-brand"><i class="fas fa-bolt"></i> EVCharge_X</div>
+      <div class="footer-links">
+        <a href="find.html">Stations</a>
+        <a href="calender.html">Bookings</a>
+        <a href="payment.html">Payments</a>
+        <a href="history.html">History</a>
+        <a href="profile.html">Profile</a>
+      </div>
+      <div class="footer-copy">&copy; 2025 EVCharge_X. All rights reserved.</div>
+    </div>
+  </footer>
+
+  <script src="backend.js"></script>
+  <script>
+    let currentBalance = parseInt(localStorage.getItem('evcharge_wallet_balance')) || 250;
+    let selectedPaymentMethod = 'GPay';
+
+    const paymentMethods = {
+      GPay: { iconClass: 'fab fa-google', displayName: 'GPay', mode: 'payment' },
+      PhonePe: { iconClass: 'fas fa-hand-holding-dollar', displayName: 'PhonePe', mode: 'payment' },
+      Paytm: { iconClass: 'fas fa-wallet', displayName: 'Paytm', mode: 'payment' },
+      'Loan Wallet': { iconClass: 'fas fa-landmark', displayName: 'Loan Wallet', mode: 'loan' }
+    };
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        const profile = await EVChargeApp.getUserProfile();
+        if (profile && profile.fullName) {
+          const btn = document.getElementById('authBtn');
+          btn.innerHTML = `<i class="fas fa-user-check"></i> ${profile.fullName.split(' ')[0]}`;
+          btn.href = 'profile.html';
+        }
+      } catch(e) {}
+    });
+
+    function generateEVID() {
+      const stored = localStorage.getItem('evcharge_evid');
+      if (stored) return stored;
+      const id = 'EVX-' + Math.floor(100000 + Math.random() * 900000);
+      localStorage.setItem('evcharge_evid', id);
+      return id;
+    }
+
+    function loadEVID() {
+      document.getElementById('evIDText').innerText = generateEVID();
+    }
+
+    function selectAmount(amount, event) {
+      document.getElementById('amountInput').value = amount;
+      document.querySelectorAll('.amount-btn').forEach(btn => btn.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+    }
+
+    function selectPaymentMethod(method, event) {
+      selectedPaymentMethod = method;
+      document.querySelectorAll('.payment-option').forEach(btn => btn.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+      updatePaymentLabels();
+    }
+
+    function updatePaymentLabels() {
+      const actionButton = document.getElementById('paymentActionButton');
+      const methodInfo = paymentMethods[selectedPaymentMethod];
+
+      if (methodInfo.mode === 'loan') {
+        actionButton.innerHTML = `<i class="${methodInfo.iconClass}"></i> Request ${methodInfo.displayName}`;
+      } else {
+        actionButton.innerHTML = `<i class="${methodInfo.iconClass}"></i> Pay with ${methodInfo.displayName}`;
+      }
+
+      document.getElementById('paymentMethodLabel').innerHTML = `<i class="${methodInfo.iconClass}"></i> ${methodInfo.displayName}`;
+      document.getElementById('confirmLabel').innerText = methodInfo.mode === 'loan' ? 'Confirm your loan request' : 'Confirm your payment';
+      document.getElementById('confirmText').innerText = methodInfo.mode === 'loan'
+        ? 'Coins will be added to your wallet through the loan wallet option.'
+        : 'Coins will be added to your wallet after payment is confirmed.';
+      document.getElementById('confirmPaymentButton').innerHTML = methodInfo.mode === 'loan'
+        ? '<i class="fas fa-lock"></i> Approve Loan'
+        : '<i class="fas fa-lock"></i> Pay Securely';
+    }
+
+    function getStoredTransactions() {
+      const raw = localStorage.getItem('evcharge_transactions');
+      try {
+        return raw ? JSON.parse(raw) : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveStoredTransactions(transactions) {
+      localStorage.setItem('evcharge_transactions', JSON.stringify(transactions));
+    }
+
+    function renderTransactions() {
+      const transactionList = document.getElementById('transactionList');
+      const transactions = getStoredTransactions();
+      const countLabel = document.getElementById('rechargeCount');
+      if (countLabel) {
+        countLabel.innerText = `(${transactions.length})`;
+      }
+
+      if (!transactions.length) {
+        transactionList.innerHTML = `
+          <div class="transaction-item" style="justify-content:center; color:var(--muted);">
+            <span>No transactions yet. Complete a top-up to see history here.</span>
+          </div>
+        `;
+        return;
+      }
+
+      transactionList.innerHTML = transactions.map(tx => `
+        <div class="transaction-item">
+          <div class="tx-left">
+            <i class="fas fa-check"></i>
+            <span>₹${tx.amount} via ${tx.method}</span>
+          </div>
+          <div class="tx-right">+ ${tx.coins} Coins</div>
+        </div>
+      `).join('');
+    }
+
+    function addTransactionRecord(amount, method) {
+      const transactions = getStoredTransactions();
+      const newTransaction = {
+        id: `TX-${Date.now()}`,
+        amount,
+        coins: amount,
+        method,
+        date: new Date().toISOString(),
+        description: `Recharge via ${method}`
+      };
+      transactions.unshift(newTransaction);
+      saveStoredTransactions(transactions);
+      return newTransaction;
+    }
+
+    function openGPay() {
+      const amount = parseFloat(document.getElementById('amountInput').value);
+      if (!amount || amount <= 0) return showErrorMessage('Please enter a valid recharge amount!');
+
+      document.getElementById('gpayAmountText').innerText = `₹${amount.toFixed(2)}`;
+      updatePaymentLabels();
+      document.getElementById('gpayOverlay').style.display = 'flex';
+    }
+
+    function closeGPay() { document.getElementById('gpayOverlay').style.display = 'none'; }
+
+    function confirmPayment() {
+      const rechargeAmount = parseInt(document.getElementById('amountInput').value, 10);
+      if (isNaN(rechargeAmount) || rechargeAmount <= 0) return showErrorMessage('Please enter a valid recharge amount!');
+
+      closeGPay();
+
+      const isLoan = paymentMethods[selectedPaymentMethod].mode === 'loan';
+      currentBalance += rechargeAmount;
+      document.getElementById('balanceText').innerText = `🪙 ${currentBalance}`;
+      localStorage.setItem('evcharge_wallet_balance', currentBalance);
+
+      const transactionMethod = paymentMethods[selectedPaymentMethod].displayName;
+      addTransactionRecord(rechargeAmount, transactionMethod);
+      renderTransactions();
+      showSuccessMessage(`${transactionMethod} ${isLoan ? 'Approved' : 'Payment Success'}! Added ${rechargeAmount} Coins to your wallet.`);
+    }
+
+    function proceedToPayment() { openGPay(); }
+
+    function showSuccessMessage(message) {
+      const toast = document.getElementById('toastMsg');
+      toast.innerText = message;
+      toast.style.display = 'block';
+      setTimeout(() => toast.style.display = 'none', 3500);
+    }
+
+    function showErrorMessage(message) {
+      const errorMsg = document.getElementById('errorMsg');
+      errorMsg.innerText = message;
+      errorMsg.style.display = 'block';
+      setTimeout(() => errorMsg.style.display = 'none', 3500);
+    }
+
+    window.addEventListener('DOMContentLoaded', function() {
+      loadEVID();
+      updatePaymentLabels();
+      renderTransactions();
+      document.getElementById('balanceText').innerText = `🪙 ${currentBalance}`;
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EVCharge_X - Barcode & QR Scanner</title>
+  <link rel="stylesheet" href="css/app-theme.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    .ev-scanner-card {
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      color: var(--white);
+      border-radius: var(--radius-md);
+      padding: 32px 24px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--shadow-xl);
+    }
+    .ev-scanner-card::after {
+      content: '⚡';
+      position: absolute;
+      right: -10px;
+      bottom: -10px;
+      font-size: 120px;
+      opacity: 0.08;
+      pointer-events: none;
+    }
+    .card-header-tag {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--primary);
+      font-weight: 800;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .auth-id-display {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: var(--white);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .code-toggle-bar {
+      display: inline-flex;
+      background: rgba(255,255,255,0.1);
+      padding: 4px;
+      border-radius: var(--radius-pill);
+      margin-bottom: 20px;
+    }
+    .toggle-pill {
+      border: none;
+      background: transparent;
+      color: rgba(255,255,255,0.7);
+      padding: 6px 18px;
+      border-radius: var(--radius-pill);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .toggle-pill.active {
+      background: var(--primary);
+      color: var(--white);
+      box-shadow: var(--shadow-sm);
+    }
+    .canvas-wrapper {
+      background: var(--white);
+      padding: 16px;
+      border-radius: var(--radius-md);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow-md);
+      min-width: 200px;
+      min-height: 200px;
+    }
+    .info-row-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px dashed var(--border);
+      font-size: 14px;
+    }
+    .info-row-item:last-child { border-bottom: none; }
+  </style>
+</head>
+<body>
+
+  <!-- ========== TOP NAVIGATION ========== -->
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a href="home.html" class="nav-brand">
+        <i class="fas fa-bolt"></i> EVCharge<span>_X</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="home.html"><i class="fas fa-home"></i> Home</a></li>
+        <li><a href="find.html"><i class="fas fa-map-marker-alt"></i> Stations</a></li>
+        <li><a href="calender.html"><i class="fas fa-calendar-alt"></i> Bookings</a></li>
+        <li><a href="payment.html"><i class="fas fa-wallet"></i> Payments</a></li>
+        <li><a href="history.html"><i class="fas fa-clock"></i> History</a></li>
+      </ul>
+      <div class="nav-actions">
+        <a href="index.html" class="nav-login-btn" id="authBtn">
+          <i class="fas fa-user"></i> Login <i class="fas fa-chevron-down" style="font-size:10px;margin-left:2px;"></i>
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ========== SUBPAGE HERO ========== -->
+  <section class="subpage-hero">
+    <div class="subpage-hero-inner">
+      <h1><i class="fas fa-qrcode"></i> Digital EV Pass & QR Scanner</h1>
+      <p>Scan your digital auth barcode at EV charging stations for automated slot verification.</p>
+    </div>
+  </section>
+
+  <!-- ========== MAIN CONTENT ========== -->
+  <div class="page-container">
+
+    <div class="grid-2 gap-grid" style="align-items: flex-start;">
+      
+      <!-- Left Column: Digital Pass Card -->
+      <div class="ev-scanner-card">
+        <div class="card-header-tag"><i class="fas fa-shield-check"></i> Driver Pass Code</div>
+        <div class="auth-id-display">
+          <span id="dispAuthId">EVX-AUTH-1001</span>
+          <button class="copy-btn" onclick="copyAuthId()" style="background:rgba(255,255,255,0.15);border:none;color:var(--primary);padding:4px 10px;border-radius:999px;cursor:pointer;font-size:12px;font-weight:700;"><i class="far fa-copy"></i></button>
+        </div>
+
+        <div class="code-toggle-bar">
+          <button class="toggle-pill active" id="btnShowQR" onclick="switchCodeView('qr')"><i class="fas fa-qrcode"></i> QR Code</button>
+          <button class="toggle-pill" id="btnShowBarcode" onclick="switchCodeView('barcode')"><i class="fas fa-barcode"></i> Barcode</button>
+        </div>
+
+        <div style="display:flex;justify-content:center;">
+          <div class="canvas-wrapper">
+            <div id="qrCanvas"></div>
+            <canvas id="barcodeCanvas" style="display:none;"></canvas>
+          </div>
+        </div>
+
+        <button class="btn-primary" style="margin-top:10px;" onclick="simulateStationVerify()">
+          <i class="fas fa-podcast"></i> Simulate Station Scanner
+        </button>
+      </div>
+
+      <!-- Right Column: Verification Details & Charging Status -->
+      <div>
+        <div class="content-card mb-4">
+          <div class="card-title">
+            <i class="fas fa-id-card" style="color:var(--primary);"></i> Authenticated Driver Credentials
+          </div>
+          <div class="info-row-item">
+            <span style="color:var(--muted);font-weight:600;">Driver Full Name</span>
+            <span style="color:var(--dark);font-weight:700;" id="dispOwnerName">EV Driver</span>
+          </div>
+          <div class="info-row-item">
+            <span style="color:var(--muted);font-weight:600;">Vehicle Registration Number</span>
+            <span style="color:var(--dark);font-weight:700;" id="dispVehicleNo">TN-38-EV-2024</span>
+          </div>
+          <div class="info-row-item">
+            <span style="color:var(--muted);font-weight:600;">Chassis Number</span>
+            <span style="color:var(--dark);font-weight:700;" id="dispChassisNo">CH-9876543210</span>
+          </div>
+          <div class="info-row-item">
+            <span style="color:var(--muted);font-weight:600;">Registered Contact Phone</span>
+            <span style="color:var(--dark);font-weight:700;" id="dispMobileNo">+91 98765 43210</span>
+          </div>
+        </div>
+
+        <!-- Charging Status Dashboard (shown when active) -->
+        <div class="content-card" id="chargingDashboard" style="display:none;background:var(--primary-lighter);border-color:var(--primary);">
+          <div class="card-title" style="color:var(--primary-dark);">
+            <i class="fas fa-bolt-lightning"></i> Active EV Charging Session
+          </div>
+          <div class="grid-2 gap-grid" style="text-align:center;margin:16px 0;">
+            <div style="background:var(--white);padding:16px;border-radius:var(--radius-sm);">
+              <div style="font-size:12px;color:var(--muted);font-weight:600;">Battery Level</div>
+              <div style="font-size:28px;font-weight:800;color:var(--primary-dark);" id="batteryPct">45%</div>
+            </div>
+            <div style="background:var(--white);padding:16px;border-radius:var(--radius-sm);">
+              <div style="font-size:12px;color:var(--muted);font-weight:600;">Energy Consumed</div>
+              <div style="font-size:28px;font-weight:800;color:var(--accent);" id="energyVal">12.4 kWh</div>
+            </div>
+          </div>
+          <button class="btn-primary" style="background:#dc2626;" onclick="stopChargingSession()">
+            <i class="fas fa-stop"></i> Stop Charging
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Verification Modal -->
+  <div class="modal-overlay" id="verifyReportModal">
+    <div class="modal-box" style="max-width:440px;">
+      <div class="modal-icon">
+        <i class="fas fa-circle-check"></i>
+      </div>
+      <h3 style="font-size:20px;font-weight:800;color:var(--dark);margin-bottom:4px;">Auth ID Verified</h3>
+      <p style="font-size:14px;color:var(--muted);margin-bottom:16px;">Vehicle & Chassis Matched at Station</p>
+      
+      <div id="verifyDetailsTable" style="background:var(--lighter);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;text-align:left;font-size:13px;margin-bottom:16px;"></div>
+
+      <button class="btn-primary" onclick="startChargingSession()">
+        <i class="fas fa-plug-circle-bolt"></i> Start Charging Session
+      </button>
+      <button onclick="closeVerifyModal()" style="width: 100%; background: none; border: none; color: var(--muted); font-size: 13px; margin-top: 12px; cursor: pointer; font-weight: 600;">Close</button>
+    </div>
+  </div>
+
+  <!-- ========== FOOTER ========== -->
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-brand"><i class="fas fa-bolt"></i> EVCharge_X</div>
+      <div class="footer-links">
+        <a href="find.html">Stations</a>
+        <a href="calender.html">Bookings</a>
+        <a href="payment.html">Payments</a>
+        <a href="history.html">History</a>
+        <a href="profile.html">Profile</a>
+      </div>
+      <div class="footer-copy">&copy; 2025 EVCharge_X. All rights reserved.</div>
+    </div>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="backend.js"></script>
+  <script>
+    let currentAuthID = '';
+    let chargeInterval = null;
+    let currentBattery = 45;
+    let currentEnergy = 12.4;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        const profile = await EVChargeApp.getUserProfile();
+        if (profile && profile.fullName) {
+          const btn = document.getElementById('authBtn');
+          btn.innerHTML = `<i class="fas fa-user-check"></i> ${profile.fullName.split(' ')[0]}`;
+          btn.href = 'profile.html';
+        }
+      } catch(e) {}
+
+      const user = EVChargeApp.getUserProfile();
+      currentAuthID = user.evID || 'EVX-AUTH-1001';
+
+      document.getElementById('dispAuthId').innerText = user.evID || 'EVX-AUTH-1001';
+      document.getElementById('dispOwnerName').innerText = user.fullName || 'EV Driver';
+      document.getElementById('dispVehicleNo').innerText = user.vehicleNumber || 'TN-38-EV-2024';
+      document.getElementById('dispChassisNo').innerText = user.chassisNumber || 'CH-9876543210';
+      document.getElementById('dispMobileNo').innerText = user.mobileNumber ? '+91 ' + user.mobileNumber : user.email || 'N/A';
+
+      const qrPayload = JSON.stringify({
+        authID: user.evID,
+        fullName: user.fullName,
+        vehicleNumber: user.vehicleNumber,
+        chassisNumber: user.chassisNumber
+      });
+
+      drawQR(qrPayload);
+      drawBarcode(user.evID || 'EVX-AUTH-1001');
+    });
+
+    function copyAuthId() {
+      navigator.clipboard.writeText(currentAuthID);
+      alert('✓ Authentication ID copied: ' + currentAuthID);
+    }
+
+    function switchCodeView(type) {
+      const qrCanvas = document.getElementById('qrCanvas');
+      const barcodeCanvas = document.getElementById('barcodeCanvas');
+      const btnQR = document.getElementById('btnShowQR');
+      const btnBarcode = document.getElementById('btnShowBarcode');
+
+      if (type === 'qr') {
+        qrCanvas.style.display = 'block';
+        barcodeCanvas.style.display = 'none';
+        btnQR.classList.add('active');
+        btnBarcode.classList.remove('active');
+      } else {
+        qrCanvas.style.display = 'none';
+        barcodeCanvas.style.display = 'block';
+        btnBarcode.classList.add('active');
+        btnQR.classList.remove('active');
+      }
+    }
+
+    function drawQR(text) {
+      const container = document.getElementById('qrCanvas');
+      container.innerHTML = '';
+
+      if (window.QRCode) {
+        new QRCode(container, {
+          text: text || currentAuthID,
+          width: 180,
+          height: 180,
+          colorDark: '#0f172a',
+          colorLight: '#ffffff',
+          correctLevel: QRCode.CorrectLevel.M
+        });
+      }
+    }
+
+    function drawBarcode(text) {
+      const canvas = document.getElementById('barcodeCanvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = 220;
+      canvas.height = 90;
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, 220, 90);
+
+      ctx.fillStyle = '#0f172a';
+      let posX = 15;
+      for (let i = 0; i < 40; i++) {
+        let barWidth = (i % 3 === 0) ? 4 : 2;
+        ctx.fillRect(posX, 10, barWidth, 55);
+        posX += barWidth + 2;
+        if (posX > 200) break;
+      }
+
+      ctx.font = '700 12px Plus Jakarta Sans, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(text, 110, 80);
+    }
+
+    function simulateStationVerify() {
+      const user = EVChargeApp.getUserProfile();
+      const table = document.getElementById('verifyDetailsTable');
+
+      table.innerHTML = `
+        <div class="info-row-item"><span style="color:var(--muted); font-weight:600;">Authentication ID:</span><span style="color:var(--primary-dark); font-weight:700;">${user.evID}</span></div>
+        <div class="info-row-item"><span style="color:var(--muted); font-weight:600;">Driver Name:</span><span style="color:var(--dark); font-weight:700;">${user.fullName}</span></div>
+        <div class="info-row-item"><span style="color:var(--muted); font-weight:600;">Vehicle Number:</span><span style="color:var(--primary-dark); font-weight:700;">${user.vehicleNumber} ✓</span></div>
+        <div class="info-row-item"><span style="color:var(--muted); font-weight:600;">Station Permission:</span><span style="color:var(--primary-dark); font-weight:800;">ALLOWED TO CHARGE ⚡</span></div>
+      `;
+
+      document.getElementById('verifyReportModal').style.display = 'flex';
+    }
+
+    function startChargingSession() {
+      document.getElementById('verifyReportModal').style.display = 'none';
+      document.getElementById('chargingDashboard').style.display = 'block';
+      
+      if (chargeInterval) clearInterval(chargeInterval);
+      
+      chargeInterval = setInterval(() => {
+        if (currentBattery < 100) {
+          currentBattery += 1;
+          currentEnergy = (parseFloat(currentEnergy) + 0.3).toFixed(1);
+          document.getElementById('batteryPct').innerText = currentBattery + '%';
+          document.getElementById('energyVal').innerText = currentEnergy + ' kWh';
+        } else {
+          clearInterval(chargeInterval);
+          alert('⚡ Charging 100% Completed!');
+        }
+      }, 1200);
+    }
+
+    function stopChargingSession() {
+      clearInterval(chargeInterval);
+      chargeInterval = null;
+      document.getElementById('chargingDashboard').style.display = 'none';
+    }
+
+    function closeVerifyModal() {
+      document.getElementById('verifyReportModal').style.display = 'none';
+    }
+  </script>
+</body>
+</html>
