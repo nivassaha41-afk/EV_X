@@ -44,7 +44,7 @@
 
   <script src="backend.js"></script>
   <script>
-    const API_BASE = 'http://127.0.0.1:8080';
+    const API_BASE = window.location.origin.startsWith('http') ? window.location.origin : 'http://127.0.0.1:8080';
 
     function fillDemoAccount() {
       document.getElementById('emailInput').value = 'driver@evcharge.com';
@@ -63,8 +63,8 @@
       const email = document.getElementById('emailInput').value.trim();
       const evID = document.getElementById('evIdInput').value.trim().toUpperCase();
 
-      if (!email || !evID) {
-        showError('Please enter your email and Unique ID.');
+      if (!email && !evID) {
+        showError('Please enter your Email or Authentication ID to log in.');
         return;
       }
 
@@ -82,35 +82,33 @@
           if (data.token) localStorage.setItem('evcharge_token', data.token);
           user = data.user;
           loginSuccess = true;
+        } else {
+          const errData = await response.json().catch(() => ({}));
+          showError(errData.error || 'Login error on server.');
+          return;
         }
       } catch (err) {
-        console.info('Node server offline. Using local client database...');
+        console.info('Node server offline. Using local storage...');
       }
 
       if (!loginSuccess) {
         await EVChargeApp._initializeStorage();
         const usersDB = EVChargeApp.getAllUsers();
         const found = Object.values(usersDB).find(u => 
-          u.evID?.toUpperCase() === evID &&
-          (!email || !u.email || u.email.toLowerCase() === email.toLowerCase())
+          (evID && u.evID?.toUpperCase() === evID) ||
+          (email && u.email?.toLowerCase() === email.toLowerCase())
         );
 
         if (found) {
           user = found;
           loginSuccess = true;
         } else {
-          const current = EVChargeApp.getUserProfile();
-          if (current && (current.evID?.toUpperCase() === evID || current.email?.toLowerCase() === email.toLowerCase())) {
-            user = current;
-            loginSuccess = true;
-          } else if (evID.startsWith('EVX-') || evID.length >= 4) {
-            user = EVChargeApp.saveUserProfile({
-              fullName: email.split('@')[0] || 'EV Driver',
-              email: email,
-              evID: evID
-            });
-            loginSuccess = true;
-          }
+          user = EVChargeApp.saveUserProfile({
+            fullName: email ? email.split('@')[0] : 'EV Driver',
+            email: email || 'driver@evcharge.com',
+            evID: evID || ''
+          });
+          loginSuccess = true;
         }
       }
 
@@ -121,7 +119,7 @@
         EVChargeApp.saveUserProfile(user);
         window.location.href = 'home.html';
       } else {
-        showError('Invalid ID or Email! Please register first if you do not have an ID.');
+        showError('Login failed! Please check your credentials or register a new account.');
       }
     }
 

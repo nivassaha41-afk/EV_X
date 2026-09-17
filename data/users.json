@@ -1,14 +1,5 @@
 [
   {
-    "id": 1785408295642,
-    "evID": "EVX-TN10-1930",
-    "fullName": "Test User",
-    "chassisNumber": "CH12345",
-    "vehicleNumber": "TN10EV1234",
-    "mobileNumber": "9876543210",
-    "registeredAt": "2026-07-30T10:44:55.642Z"
-  },
-  {
     "id": 1785408443552,
     "evID": "EVX-1234-6827",
     "fullName": "prathap",
@@ -45,13 +36,13 @@
     "registeredAt": "2026-07-31T04:01:22.771Z"
   },
   {
-    "id": 1787822204043,
-    "evID": "EVX-TNVA-4934",
-    "fullName": "Validation User",
-    "chassisNumber": "CH-VALID-2",
-    "vehicleNumber": "TN-VALID-2",
-    "email": "validation2@example.com",
-    "mobileNumber": "9000000002",
-    "registeredAt": "2026-08-27T09:16:44.043Z"
+    "id": 1789530100678,
+    "evID": "EVX-TN57-1372",
+    "fullName": "sheik farid",
+    "chassisNumber": "1234",
+    "vehicleNumber": "TN-57-EV-7566",
+    "email": "nivassaha41@gmail.com",
+    "mobileNumber": "9876543210",
+    "registeredAt": "2026-09-16T03:41:40.678Z"
   }
 ]

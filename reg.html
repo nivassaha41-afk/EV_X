@@ -70,7 +70,7 @@
 
   <script src="backend.js"></script>
   <script>
-    const API_BASE = 'http://127.0.0.1:8080';
+    const API_BASE = window.location.origin.startsWith('http') ? window.location.origin : 'http://127.0.0.1:8080';
 
     async function registerUser(e) {
       e.preventDefault();
@@ -94,7 +94,7 @@
         mobileNumber
       };
 
-      let registeredId = '';
+      let registeredUser = null;
 
       try {
         const response = await fetch(`${API_BASE}/api/register`, {
@@ -103,24 +103,25 @@
           body: JSON.stringify(payload)
         });
 
-        if (response.ok) {
-          const data = await response.json().catch(() => ({}));
-          registeredId = data.user?.evID || '';
-        } else {
-          const errData = await response.json().catch(() => ({}));
-          if (errData.error) {
-            console.warn('Registration Server Note:', errData.error);
+        const data = await response.json().catch(() => ({}));
+
+        if (response.ok && data.user) {
+          registeredUser = data.user;
+          if (data.token) {
+            localStorage.setItem('evcharge_token', data.token);
           }
+        } else {
+          alert(data.error || 'Registration failed on server. Please check your details.');
+          return;
         }
       } catch (err) {
-        console.info('Node server offline, registering in local database...');
+        console.error('Server offline or network error:', err);
+        // Fallback save to client database if backend server is not reachable
+        alert('Notice: Backend server is offline or unreachable. Saving locally...');
       }
 
       await EVChargeApp._initializeStorage();
-      const profile = EVChargeApp.saveUserProfile({
-        ...payload,
-        evID: registeredId
-      });
+      const profile = EVChargeApp.saveUserProfile(registeredUser ? registeredUser : payload);
 
       document.getElementById('generatedAuthId').innerText = profile.evID;
       document.getElementById('successModal').style.display = 'flex';
