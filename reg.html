@@ -14,6 +14,8 @@
       <h2>Create Account</h2>
       <p class="auth-subtitle">Register your EV driver account & generate Auth ID</p>
 
+      <div id="alertMsg" style="display:none; background:#fee2e2; border:1px solid #ef4444; color:#991b1b; padding:10px 14px; border-radius:10px; font-size:13px; font-weight:600; margin-bottom:14px; text-align:center;"></div>
+
       <form onsubmit="registerUser(event)">
         <div style="margin-bottom: 14px;">
           <input id="fullNameInput" type="text" class="form-control-white" placeholder="Driver Full Name" required>
@@ -48,32 +50,41 @@
 
   <!-- Success Modal -->
   <div class="modal-overlay" id="successModal">
-    <div class="modal-box">
-      <div class="modal-icon">
+    <div class="modal-box" style="max-width:270px;padding:22px 18px;border-radius:18px;">
+      <div class="modal-icon" style="width:46px;height:46px;font-size:20px;margin-bottom:12px;">
         <i class="fas fa-circle-check"></i>
       </div>
-      <h3 style="font-size:20px;font-weight:800;color:var(--dark);margin-bottom:6px;">Registration Complete!</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Your Unique Authentication ID has been generated:</p>
+      <h3 style="font-size:15px;font-weight:800;color:var(--dark);margin-bottom:5px;">Registration Complete!</h3>
+      <p style="font-size:9px;color:var(--muted);margin-bottom:10px;">Your Unique Authentication ID has been generated:</p>
       
-      <div style="background:var(--primary-lighter);color:var(--primary-dark);padding:10px 16px;border-radius:var(--radius-pill);font-size:18px;font-weight:800;margin-bottom:14px;" id="generatedAuthId">EVX-AUTH-1234</div>
+      <div style="background:#f8fafc;color:var(--dark);padding:9px 8px;border:1px dashed var(--primary);border-radius:10px;font-size:15px;letter-spacing:.4px;font-weight:800;margin-bottom:10px;" id="generatedAuthId">EVX-AUTH-1234</div>
+      <p id="idDisplayNotice" style="font-size:9px;color:var(--muted);margin-bottom:10px;"><i class="fas fa-shield-halved"></i> Details saved to Profile & Scanner</p>
       
-      <p style="font-size:13px;color:var(--primary-dark);font-weight:700;margin-bottom:16px;">
-        <i class="fas fa-shield-halved"></i> Saved to local profile & digital pass scanner
-      </p>
-
-      <div class="modal-actions">
-        <button class="modal-btn secondary" onclick="viewQRCode()">QR Scanner</button>
-        <button class="modal-btn primary" onclick="proceedToLogin()">Proceed to Login</button>
+      <div class="modal-actions" style="gap:7px;margin-top:2px;">
+        <button class="modal-btn secondary" style="padding:9px 5px;font-size:10px;border-radius:999px;" onclick="viewQRCode()">View QR Code</button>
+        <button class="modal-btn primary" style="padding:9px 5px;font-size:10px;border-radius:999px;" onclick="proceedToLogin()">Proceed to Login</button>
       </div>
     </div>
   </div>
 
   <script src="backend.js"></script>
   <script>
-    const API_BASE = window.location.origin.startsWith('http') ? window.location.origin : 'http://127.0.0.1:8080';
+    const API_BASE = window.location.protocol.startsWith('http') && window.location.port === '8080'
+      ? window.location.origin
+      : 'http://127.0.0.1:8080';
+
+    function showError(msg) {
+      const alertBox = document.getElementById('alertMsg');
+      alertBox.innerText = msg;
+      alertBox.style.display = 'block';
+      setTimeout(() => {
+        alertBox.style.display = 'none';
+      }, 5000);
+    }
 
     async function registerUser(e) {
       e.preventDefault();
+      document.getElementById('alertMsg').style.display = 'none';
 
       const fullName = document.getElementById('fullNameInput').value.trim();
       const chassisNumber = document.getElementById('chassisInput').value.trim();
@@ -82,7 +93,7 @@
       const mobileNumber = document.getElementById('mobileInput').value.trim();
 
       if (!fullName || !chassisNumber || !vehicleNumber || !email || !mobileNumber) {
-        alert('Please fill in all the required fields.');
+        showError('Please fill in all required fields.');
         return;
       }
 
@@ -94,8 +105,6 @@
         mobileNumber
       };
 
-      let registeredUser = null;
-
       try {
         const response = await fetch(`${API_BASE}/api/register`, {
           method: 'POST',
@@ -106,25 +115,40 @@
         const data = await response.json().catch(() => ({}));
 
         if (response.ok && data.user) {
-          registeredUser = data.user;
           if (data.token) {
             localStorage.setItem('evcharge_token', data.token);
           }
+          await EVChargeApp._initializeStorage();
+          const profile = EVChargeApp.saveUserProfile(data.user);
+          localStorage.setItem('evcharge_last_registered_id', profile.evID || data.user.evID);
+          localStorage.setItem('evcharge_last_registered_email', profile.email || data.user.email || email);
+
+          showRegistrationSuccess(profile.evID || data.user.evID);
+          return;
         } else {
-          alert(data.error || 'Registration failed on server. Please check your details.');
+          showError(data.error || 'Server registration failed. Please check your details.');
           return;
         }
       } catch (err) {
-        console.error('Server offline or network error:', err);
-        // Fallback save to client database if backend server is not reachable
-        alert('Notice: Backend server is offline or unreachable. Saving locally...');
+        console.info('Node server offline, registering in local database...');
+        await EVChargeApp._initializeStorage();
+        const profile = EVChargeApp.saveUserProfile(payload);
+        localStorage.setItem('evcharge_last_registered_id', profile.evID);
+        localStorage.setItem('evcharge_last_registered_email', profile.email || email);
+
+        showRegistrationSuccess(profile.evID);
       }
+    }
 
-      await EVChargeApp._initializeStorage();
-      const profile = EVChargeApp.saveUserProfile(registeredUser ? registeredUser : payload);
+    let registrationDisplayTimer;
 
-      document.getElementById('generatedAuthId').innerText = profile.evID;
+    function showRegistrationSuccess(uniqueId) {
+      document.getElementById('generatedAuthId').innerText = uniqueId;
       document.getElementById('successModal').style.display = 'flex';
+
+      clearInterval(registrationDisplayTimer);
+      const notice = document.getElementById('idDisplayNotice');
+      notice.innerHTML = '<i class="fas fa-shield-halved"></i> Details saved to Profile & Scanner';
     }
 
     function viewQRCode() {
@@ -132,7 +156,9 @@
     }
 
     function proceedToLogin() {
-      window.location.href = 'index.html';
+      localStorage.removeItem('evcharge_token');
+      localStorage.setItem('evcharge_logged_in', 'false');
+      window.location.href = 'index.html?registered=1';
     }
   </script>
 </body>

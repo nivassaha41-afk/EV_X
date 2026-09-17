@@ -345,10 +345,15 @@ const EVChargeApp = {
 
         const usersDB = this._getUsersDB();
         const existingUser = Object.values(usersDB).find((user) => {
-            const sameEmail = (user.email || '').toString().trim().toLowerCase() === normalizedProfile.email.toLowerCase();
-            const sameMobile = (user.mobileNumber || '').toString().trim().toUpperCase() === normalizedProfile.mobileNumber.toUpperCase();
-            const sameVehicle = (user.vehicleNumber || '').toString().trim().toUpperCase() === normalizedProfile.vehicleNumber.toUpperCase();
-            const sameChassis = (user.chassisNumber || '').toString().trim().toUpperCase() === normalizedProfile.chassisNumber.toUpperCase();
+            const userEmail = (user.email || '').toString().trim().toLowerCase();
+            const userMobile = (user.mobileNumber || '').toString().trim().toUpperCase();
+            const userVehicle = (user.vehicleNumber || '').toString().trim().toUpperCase();
+            const userChassis = (user.chassisNumber || '').toString().trim().toUpperCase();
+
+            const sameEmail = Boolean(normalizedProfile.email && userEmail && userEmail === normalizedProfile.email.toLowerCase());
+            const sameMobile = Boolean(normalizedProfile.mobileNumber && userMobile && userMobile === normalizedProfile.mobileNumber.toUpperCase());
+            const sameVehicle = Boolean(normalizedProfile.vehicleNumber && userVehicle && userVehicle === normalizedProfile.vehicleNumber.toUpperCase());
+            const sameChassis = Boolean(normalizedProfile.chassisNumber && userChassis && userChassis === normalizedProfile.chassisNumber.toUpperCase());
             return sameEmail || sameMobile || sameVehicle || sameChassis;
         });
 
