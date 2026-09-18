@@ -187,5 +187,25 @@
     "email": "nvatfdyus@pr.comh",
     "mobileNumber": "81123890009",
     "registeredAt": "2026-09-17T14:21:49.000Z"
+  },
+  {
+    "id": 42,
+    "evID": "EVX-TN57-8504",
+    "fullName": "Saha Nivasw",
+    "chassisNumber": "3457834",
+    "vehicleNumber": "TN-57-EV-7561",
+    "email": "nivassaha41@gmail.co",
+    "mobileNumber": "637923389",
+    "registeredAt": "2026-09-17T14:47:37.000Z"
+  },
+  {
+    "id": 43,
+    "evID": "EVX-TN57-8890",
+    "fullName": "Antony rethan S",
+    "chassisNumber": "75661302",
+    "vehicleNumber": "TN-57-EV-7566",
+    "email": "nivassaha41@gmail.com",
+    "mobileNumber": "6379233871",
+    "registeredAt": "2026-09-17T14:50:48.000Z"
   }
 ]
