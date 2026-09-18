@@ -207,5 +207,15 @@
     "email": "nivassaha41@gmail.com",
     "mobileNumber": "6379233871",
     "registeredAt": "2026-09-17T14:50:48.000Z"
+  },
+  {
+    "id": 44,
+    "evID": "EVX-4567-6941",
+    "fullName": "Saha Nivas",
+    "chassisNumber": "1234",
+    "vehicleNumber": "4567",
+    "email": "nivasha41@gmail.com",
+    "mobileNumber": "1234567",
+    "registeredAt": "2026-09-18T06:13:39.000Z"
   }
 ]
