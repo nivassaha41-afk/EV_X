@@ -217,5 +217,15 @@
     "email": "nivasha41@gmail.com",
     "mobileNumber": "1234567",
     "registeredAt": "2026-09-18T06:13:39.000Z"
+  },
+  {
+    "id": 45,
+    "evID": "EVX-3245-7155",
+    "fullName": "qwerytu",
+    "chassisNumber": "2435678",
+    "vehicleNumber": "324567",
+    "email": "hsfg@234567",
+    "mobileNumber": "234567",
+    "registeredAt": "2026-09-18T06:39:33.000Z"
   }
 ]
