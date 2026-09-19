@@ -237,5 +237,16 @@
     "email": "newunique9999@gmail.com",
     "mobileNumber": "9999988888",
     "registeredAt": "2026-09-19T17:12:10.000Z"
+  },
+  {
+    "id": 47,
+    "evID": "EVX-TNAL-4013",
+    "fullName": "Always Store Test Updated",
+    "chassisNumber": "CH-ALWAYS-1",
+    "vehicleNumber": "TN-ALWAYS-1",
+    "email": "alwaysstore1@gmail.com",
+    "mobileNumber": "9888877777",
+    "registeredAt": "2026-09-19T17:39:05.000Z",
+    "updatedAt": "2026-09-19T17:40:52.654Z"
   }
 ]

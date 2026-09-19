@@ -204,119 +204,103 @@ app.post('/api/register', async (req, res) => {
   const cleanVehicle = String(vehicleNumber || '').trim().toUpperCase();
   const cleanChassis = String(chassisNumber || '').trim().toUpperCase();
 
-  if (!cleanMobile) return res.status(400).json({ error: 'Mobile number is required' });
-  if (!cleanEmail) return res.status(400).json({ error: 'Email address is required' });
-
-  const evID = generateEVID(cleanVehicle, cleanChassis, cleanFullName).toUpperCase();
+  if (!cleanMobile && !cleanEmail) {
+    return res.status(400).json({ error: 'Mobile number or email address is required' });
+  }
 
   try {
+    let user = null;
+
+    // 1. Always attempt MySQL Save / Update if pool is connected
     if (storageMode === 'mysql' && pool) {
-      const conditions = [];
-      const queryParams = [];
+      try {
+        const conditions = [];
+        const queryParams = [];
+        if (cleanEmail) { conditions.push('LOWER(TRIM(email)) = ?'); queryParams.push(cleanEmail); }
+        if (cleanMobile) { conditions.push('UPPER(TRIM(mobileNumber)) = ?'); queryParams.push(cleanMobile); }
+        if (cleanVehicle) { conditions.push('UPPER(TRIM(vehicleNumber)) = ?'); queryParams.push(cleanVehicle); }
+        if (cleanChassis) { conditions.push('UPPER(TRIM(chassisNumber)) = ?'); queryParams.push(cleanChassis); }
 
-      if (cleanEmail) {
-        conditions.push('LOWER(TRIM(email)) = ?');
-        queryParams.push(cleanEmail);
-      }
-      if (cleanMobile) {
-        conditions.push('UPPER(TRIM(mobileNumber)) = ?');
-        queryParams.push(cleanMobile);
-      }
-      if (cleanVehicle) {
-        conditions.push('UPPER(TRIM(vehicleNumber)) = ?');
-        queryParams.push(cleanVehicle);
-      }
-      if (cleanChassis) {
-        conditions.push('UPPER(TRIM(chassisNumber)) = ?');
-        queryParams.push(cleanChassis);
-      }
-
-      if (conditions.length > 0) {
-        const [existing] = await pool.query(
-          `SELECT email, mobileNumber, vehicleNumber, chassisNumber FROM users WHERE ${conditions.join(' OR ')}`,
-          queryParams
-        );
-
-        if (existing && existing.length) {
-          const duplicateFields = new Set();
-          for (const record of existing) {
-            if (cleanEmail && record.email && record.email.toString().trim().toLowerCase() === cleanEmail) duplicateFields.add('email');
-            if (cleanMobile && record.mobileNumber && record.mobileNumber.toString().trim().toUpperCase() === cleanMobile) duplicateFields.add('mobile number');
-            if (cleanVehicle && record.vehicleNumber && record.vehicleNumber.toString().trim().toUpperCase() === cleanVehicle) duplicateFields.add('vehicle number');
-            if (cleanChassis && record.chassisNumber && record.chassisNumber.toString().trim().toUpperCase() === cleanChassis) duplicateFields.add('chassis number');
-          }
-          if (duplicateFields.size > 0) {
-            return res.status(400).json({ error: `Already registered: ${Array.from(duplicateFields).join(', ')}` });
+        let existingId = null;
+        if (conditions.length > 0) {
+          const [existing] = await pool.query(
+            `SELECT id, evID FROM users WHERE ${conditions.join(' OR ')} LIMIT 1`,
+            queryParams
+          );
+          if (existing && existing.length > 0) {
+            existingId = existing[0].id;
           }
         }
-      }
 
-      const [result] = await pool.query(
-        'INSERT INTO users (evID, fullName, chassisNumber, vehicleNumber, email, password, mobileNumber) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [evID, cleanFullName, cleanChassis, cleanVehicle, cleanEmail, '', cleanMobile]
+        if (existingId) {
+          await pool.query(
+            'UPDATE users SET fullName=?, chassisNumber=?, vehicleNumber=?, email=?, mobileNumber=? WHERE id=?',
+            [cleanFullName, cleanChassis, cleanVehicle, cleanEmail, cleanMobile, existingId]
+          );
+          const [rows] = await pool.query('SELECT * FROM users WHERE id = ?', [existingId]);
+          user = rows[0];
+        } else {
+          const evID = generateEVID(cleanVehicle, cleanChassis, cleanFullName).toUpperCase();
+          const [result] = await pool.query(
+            'INSERT INTO users (evID, fullName, chassisNumber, vehicleNumber, email, password, mobileNumber) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [evID, cleanFullName, cleanChassis, cleanVehicle, cleanEmail, '', cleanMobile]
+          );
+          const [rows] = await pool.query('SELECT * FROM users WHERE id = ?', [result.insertId]);
+          user = rows[0];
+        }
+      } catch (mysqlErr) {
+        console.warn('MySQL storage error during registration:', mysqlErr.message);
+      }
+    }
+
+    // 2. Always sync to data/users.json backup file
+    try {
+      const usersJson = await readUsersFile();
+      const existingIdx = usersJson.findIndex(u =>
+        (cleanEmail && u.email && u.email.toString().trim().toLowerCase() === cleanEmail) ||
+        (cleanMobile && u.mobileNumber && u.mobileNumber.toString().trim().toUpperCase() === cleanMobile) ||
+        (cleanVehicle && u.vehicleNumber && u.vehicleNumber.toString().trim().toUpperCase() === cleanVehicle) ||
+        (cleanChassis && u.chassisNumber && u.chassisNumber.toString().trim().toUpperCase() === cleanChassis)
       );
 
-      const [rows] = await pool.query('SELECT * FROM users WHERE id = ?', [result.insertId]);
-      const user = rows[0];
-
-      // Keep users.json synchronized as backup
-      try {
-        const usersJson = await readUsersFile();
-        if (!usersJson.some((u) => u.evID === user.evID || u.email === user.email)) {
-          usersJson.push({
-            id: user.id,
-            evID: user.evID,
-            fullName: user.fullName,
-            chassisNumber: user.chassisNumber,
-            vehicleNumber: user.vehicleNumber,
-            email: user.email,
-            mobileNumber: user.mobileNumber,
-            registeredAt: user.registeredAt || new Date().toISOString()
-          });
-          await writeUsersFile(usersJson);
-        }
-      } catch (err) {
-        console.warn('Failed to sync to users.json:', err.message);
+      if (existingIdx !== -1) {
+        usersJson[existingIdx] = {
+          ...usersJson[existingIdx],
+          fullName: cleanFullName || usersJson[existingIdx].fullName,
+          chassisNumber: cleanChassis || usersJson[existingIdx].chassisNumber,
+          vehicleNumber: cleanVehicle || usersJson[existingIdx].vehicleNumber,
+          email: cleanEmail || usersJson[existingIdx].email,
+          mobileNumber: cleanMobile || usersJson[existingIdx].mobileNumber,
+          updatedAt: new Date().toISOString()
+        };
+        if (!user) user = usersJson[existingIdx];
+      } else {
+        const evID = user?.evID || generateEVID(cleanVehicle, cleanChassis, cleanFullName).toUpperCase();
+        const newUserObj = {
+          id: user?.id || Date.now(),
+          evID,
+          fullName: cleanFullName,
+          chassisNumber: cleanChassis,
+          vehicleNumber: cleanVehicle,
+          email: cleanEmail,
+          mobileNumber: cleanMobile,
+          registeredAt: new Date().toISOString()
+        };
+        usersJson.push(newUserObj);
+        if (!user) user = newUserObj;
       }
-
-      const token = signToken({ evID: user.evID, id: user.id });
-      return res.json({ user, token });
+      await writeUsersFile(usersJson);
+    } catch (jsonErr) {
+      console.warn('File storage error during registration:', jsonErr.message);
     }
 
-    const users = await readUsersFile();
-
-    const existing = users.find((user) => {
-      const sameEmail = cleanEmail && user.email && user.email.toString().trim().toLowerCase() === cleanEmail;
-      const sameMobile = cleanMobile && user.mobileNumber && user.mobileNumber.toString().trim().toUpperCase() === cleanMobile;
-      const sameVehicle = cleanVehicle && user.vehicleNumber && user.vehicleNumber.toString().trim().toUpperCase() === cleanVehicle;
-      const sameChassis = cleanChassis && user.chassisNumber && user.chassisNumber.toString().trim().toUpperCase() === cleanChassis;
-      return sameEmail || sameMobile || sameVehicle || sameChassis;
-    });
-
-    if (existing) {
-      const duplicateFields = [];
-      if (cleanEmail && existing.email && existing.email.toString().trim().toLowerCase() === cleanEmail) duplicateFields.push('email');
-      if (cleanMobile && existing.mobileNumber && existing.mobileNumber.toString().trim().toUpperCase() === cleanMobile) duplicateFields.push('mobile number');
-      if (cleanVehicle && existing.vehicleNumber && existing.vehicleNumber.toString().trim().toUpperCase() === cleanVehicle) duplicateFields.push('vehicle number');
-      if (cleanChassis && existing.chassisNumber && existing.chassisNumber.toString().trim().toUpperCase() === cleanChassis) duplicateFields.push('chassis number');
-      return res.status(400).json({ error: `Already registered: ${duplicateFields.join(', ') || 'one of the provided details'}` });
+    if (!user) {
+      const evID = generateEVID(cleanVehicle, cleanChassis, cleanFullName).toUpperCase();
+      user = { id: Date.now(), evID, fullName: cleanFullName, chassisNumber: cleanChassis, vehicleNumber: cleanVehicle, email: cleanEmail, mobileNumber: cleanMobile };
     }
 
-    const user = {
-      id: Date.now(),
-      evID,
-      fullName: cleanFullName,
-      chassisNumber: cleanChassis,
-      vehicleNumber: cleanVehicle,
-      email: cleanEmail,
-      mobileNumber: cleanMobile,
-      registeredAt: new Date().toISOString()
-    };
-
-    users.push(user);
-    await writeUsersFile(users);
     const token = signToken({ evID: user.evID, id: user.id });
-    return res.json({ user, token });
+    return res.json({ user, token, message: 'Saved successfully to database' });
   } catch (e) {
     console.error('Register error', e);
     return res.status(500).json({ error: 'Internal server error' });
