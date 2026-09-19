@@ -309,28 +309,41 @@ app.post('/api/register', async (req, res) => {
 
 app.post('/api/login', async (req, res) => {
   const { email, evID } = req.body || {};
-  if (!email) return res.status(400).json({ error: 'email is required' });
-  if (!evID) return res.status(400).json({ error: 'evID is required' });
+  const cleanEmail = String(email || '').trim().toLowerCase();
+  const cleanEvID = String(evID || '').trim().toUpperCase();
+
+  if (!cleanEmail && !cleanEvID) {
+    return res.status(400).json({ error: 'Email or Unique ID is required' });
+  }
 
   try {
     if (storageMode === 'mysql' && pool) {
-      const [rows] = await pool.query('SELECT * FROM users WHERE email = ? AND evID = ?', [email, String(evID).trim().toUpperCase()]);
-      if (!rows || !rows.length) return res.status(401).json({ error: 'Invalid email or Unique ID' });
-      const user = rows[0];
+      const conditions = [];
+      const params = [];
+      if (cleanEvID) { conditions.push('UPPER(evID) = ?'); params.push(cleanEvID); }
+      if (cleanEmail) { conditions.push('LOWER(email) = ?'); params.push(cleanEmail); }
+
+      const [rows] = await pool.query(`SELECT * FROM users WHERE ${conditions.join(' OR ')} ORDER BY id DESC LIMIT 1`, params);
+      if (rows && rows.length) {
+        const user = rows[0];
+        const token = signToken({ evID: user.evID, id: user.id });
+        return res.json({ user, token });
+      }
+    }
+
+    const users = await readUsersFile();
+    const user = users.slice().reverse().find((item) => {
+      const matchID = cleanEvID && (item.evID || '').toUpperCase() === cleanEvID;
+      const matchEmail = cleanEmail && (item.email || '').toLowerCase() === cleanEmail;
+      return matchID || matchEmail;
+    });
+
+    if (user) {
       const token = signToken({ evID: user.evID, id: user.id });
       return res.json({ user, token });
     }
 
-    const users = await readUsersFile();
-    const user = users.find((item) => {
-      return (item.email || '').toLowerCase() === String(email).trim().toLowerCase()
-        && (item.evID || '').toUpperCase() === String(evID).trim().toUpperCase();
-    });
-    
-    if (!user) return res.status(401).json({ error: 'Invalid email or Unique ID' });
-    
-    const token = signToken({ evID: user.evID, id: user.id });
-    return res.json({ user, token });
+    return res.status(401).json({ error: 'Invalid Email or Unique ID' });
   } catch (e) {
     console.error('Login error', e);
     return res.status(500).json({ error: 'Internal server error' });

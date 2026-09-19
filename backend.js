@@ -324,14 +324,15 @@ const EVChargeApp = {
     // Save user profile & index in local Users Database
     saveUserProfile(profile) {
         const storage = this._getStorage();
-        const registeredAt = new Date().toLocaleDateString();
+        const existing = (typeof this.getUserProfile === 'function' ? this.getUserProfile() : null) || {};
+        const registeredAt = profile.registeredAt || existing.registeredAt || new Date().toLocaleDateString();
         const normalizedProfile = {
-            fullName: profile.fullName || 'EV Owner',
-            chassisNumber: profile.chassisNumber || 'CH-9876543210',
-            vehicleNumber: profile.vehicleNumber || 'TN-38-EV-2024',
-            email: (profile.email || '').toString().trim().toLowerCase(),
-            mobileNumber: profile.mobileNumber || '9876543210',
-            evID: (profile.evID || '').toString().trim().toUpperCase(),
+            fullName: profile.fullName || existing.fullName || 'EV Owner',
+            chassisNumber: profile.chassisNumber || existing.chassisNumber || '',
+            vehicleNumber: profile.vehicleNumber || existing.vehicleNumber || '',
+            email: (profile.email || existing.email || '').toString().trim().toLowerCase(),
+            mobileNumber: profile.mobileNumber || existing.mobileNumber || '',
+            evID: (profile.evID || existing.evID || '').toString().trim().toUpperCase(),
             registeredAt
         };
 
