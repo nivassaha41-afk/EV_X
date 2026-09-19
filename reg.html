@@ -67,7 +67,7 @@
       
       <div class="modal-actions" style="gap:7px;margin-top:2px;">
         <button class="modal-btn secondary" style="padding:9px 5px;font-size:10px;border-radius:999px;" onclick="viewQRCode()">View QR Code</button>
-        <button class="modal-btn primary" style="padding:9px 5px;font-size:10px;border-radius:999px;" onclick="proceedToLogin()">Proceed to Login</button>
+        <button class="modal-btn primary" style="padding:9px 5px;font-size:10px;border-radius:999px;" onclick="proceedToDashboard()">Go to Dashboard</button>
       </div>
     </div>
   </div>
@@ -161,7 +161,13 @@
     }
 
     function viewQRCode() {
+      localStorage.setItem('evcharge_logged_in', 'true');
       window.location.href = 'scanner.html';
+    }
+
+    function proceedToDashboard() {
+      localStorage.setItem('evcharge_logged_in', 'true');
+      window.location.href = 'home.html';
     }
 
     function proceedToLogin() {
