@@ -46,7 +46,9 @@
   <script src="backend.js"></script>
   <script>
     const API_BASE = window.location.protocol.startsWith('http')
-      ? window.location.origin
+      ? (window.location.port && window.location.port !== '8080'
+          ? `${window.location.protocol}//${window.location.hostname}:8080`
+          : window.location.origin)
       : 'http://127.0.0.1:8080';
 
     function fillDemoAccount() {

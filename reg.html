@@ -70,7 +70,9 @@
   <script src="backend.js"></script>
   <script>
     const API_BASE = window.location.protocol.startsWith('http')
-      ? window.location.origin
+      ? (window.location.port && window.location.port !== '8080'
+          ? `${window.location.protocol}//${window.location.hostname}:8080`
+          : window.location.origin)
       : 'http://127.0.0.1:8080';
 
     function showError(msg) {
@@ -79,7 +81,7 @@
       alertBox.style.display = 'block';
       setTimeout(() => {
         alertBox.style.display = 'none';
-      }, 5000);
+      }, 7000);
     }
 
     async function registerUser(e) {
@@ -125,9 +127,11 @@
 
           showRegistrationSuccess(profile.evID || data.user.evID);
           return;
-        } else {
+        } else if (response.status === 400 || data.error) {
           showError(data.error || 'Server registration failed. Please check your details.');
           return;
+        } else {
+          throw new Error('Server endpoint unavailable');
         }
       } catch (err) {
         console.info('Node server offline, registering in local database...');

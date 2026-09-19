@@ -227,5 +227,15 @@
     "email": "hsfg@234567",
     "mobileNumber": "234567",
     "registeredAt": "2026-09-18T06:39:33.000Z"
+  },
+  {
+    "id": 46,
+    "evID": "EVX-TN99-8502",
+    "fullName": "New Driver",
+    "chassisNumber": "CH-UNIQUE-9999",
+    "vehicleNumber": "TN-99-EV-9999",
+    "email": "newunique9999@gmail.com",
+    "mobileNumber": "9999988888",
+    "registeredAt": "2026-09-19T17:12:10.000Z"
   }
 ]

@@ -136,7 +136,26 @@ async function initDB() {
         FOREIGN KEY (userId) REFERENCES users(id) ON DELETE SET NULL
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
- 
+
+    // Charging sessions table for hardware IoT integration
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS charging_sessions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        evID VARCHAR(64) NOT NULL,
+        userId INT NULL,
+        stationId VARCHAR(32) DEFAULT 'STATION-01',
+        status ENUM('active','completed','cancelled') DEFAULT 'active',
+        startTime DATETIME DEFAULT CURRENT_TIMESTAMP,
+        endTime DATETIME NULL,
+        currentAmps DECIMAL(6,2) DEFAULT 0,
+        voltage DECIMAL(6,2) DEFAULT 230,
+        totalKWh DECIMAL(8,3) DEFAULT 0,
+        cost DECIMAL(10,2) DEFAULT 0,
+        duration INT DEFAULT 0,
+        FOREIGN KEY (userId) REFERENCES users(id) ON DELETE SET NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
     storageMode = 'mysql';
     console.log('Using MySQL for user storage');
   } catch (error) {
@@ -399,6 +418,187 @@ app.get('/api/users', async (req, res) => {
     return res.json({ storageMode: 'file', total: users.length, users });
   } catch (e) {
     return res.status(500).json({ error: e.message });
+  }
+});
+
+// ============================================
+// HARDWARE IoT STATION APIs (ESP32 calls these)
+// ============================================
+
+// ESP32 sends evID → server checks if valid user → returns user data
+app.post('/api/station/verify', async (req, res) => {
+  const { evID } = req.body || {};
+  if (!evID) return res.status(400).json({ verified: false, error: 'evID is required' });
+
+  const cleanID = String(evID).trim().toUpperCase();
+
+  try {
+    if (storageMode === 'mysql' && pool) {
+      const [rows] = await pool.query('SELECT id, evID, fullName, vehicleNumber, email FROM users WHERE UPPER(TRIM(evID)) = ?', [cleanID]);
+      if (rows && rows.length > 0) {
+        const user = rows[0];
+        // Check if there's already an active session
+        const [active] = await pool.query('SELECT id FROM charging_sessions WHERE evID = ? AND status = "active"', [cleanID]);
+        return res.json({
+          verified: true,
+          user: { id: user.id, evID: user.evID, fullName: user.fullName, vehicleNumber: user.vehicleNumber },
+          hasActiveSession: active && active.length > 0
+        });
+      }
+      return res.json({ verified: false, error: 'User not found' });
+    }
+
+    // JSON file fallback
+    const users = await readUsersFile();
+    const user = users.find(u => (u.evID || '').toUpperCase() === cleanID);
+    if (user) {
+      return res.json({
+        verified: true,
+        user: { id: user.id, evID: user.evID, fullName: user.fullName, vehicleNumber: user.vehicleNumber },
+        hasActiveSession: false
+      });
+    }
+    return res.json({ verified: false, error: 'User not found' });
+  } catch (e) {
+    console.error('Station verify error:', e);
+    return res.status(500).json({ verified: false, error: 'Server error' });
+  }
+});
+
+// ESP32 starts a new charging session
+app.post('/api/station/start', async (req, res) => {
+  const { evID, stationId } = req.body || {};
+  if (!evID) return res.status(400).json({ error: 'evID is required' });
+
+  const cleanID = String(evID).trim().toUpperCase();
+  const station = stationId || 'STATION-01';
+
+  try {
+    if (storageMode === 'mysql' && pool) {
+      // Get user ID
+      const [users] = await pool.query('SELECT id FROM users WHERE UPPER(TRIM(evID)) = ?', [cleanID]);
+      const userId = users && users[0] ? users[0].id : null;
+
+      // Cancel any existing active sessions for this user
+      await pool.query('UPDATE charging_sessions SET status = "cancelled", endTime = NOW() WHERE evID = ? AND status = "active"', [cleanID]);
+
+      // Start new session
+      const [result] = await pool.query(
+        'INSERT INTO charging_sessions (evID, userId, stationId, status, startTime) VALUES (?, ?, ?, "active", NOW())',
+        [cleanID, userId, station]
+      );
+
+      return res.json({ success: true, sessionId: result.insertId, message: 'Charging session started' });
+    }
+
+    return res.json({ success: true, sessionId: Date.now(), message: 'Charging session started (file mode)' });
+  } catch (e) {
+    console.error('Station start error:', e);
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ESP32 sends real-time charging data every few seconds
+app.post('/api/station/status', async (req, res) => {
+  const { evID, sessionId, currentAmps, voltage, totalKWh, duration } = req.body || {};
+  if (!evID) return res.status(400).json({ error: 'evID is required' });
+
+  try {
+    if (storageMode === 'mysql' && pool) {
+      const costPerKWh = 12; // ₹12 per kWh — change as needed
+      const cost = parseFloat(totalKWh || 0) * costPerKWh;
+
+      if (sessionId) {
+        await pool.query(
+          'UPDATE charging_sessions SET currentAmps = ?, voltage = ?, totalKWh = ?, cost = ?, duration = ? WHERE id = ? AND status = "active"',
+          [parseFloat(currentAmps) || 0, parseFloat(voltage) || 230, parseFloat(totalKWh) || 0, cost, parseInt(duration) || 0, sessionId]
+        );
+      } else {
+        await pool.query(
+          'UPDATE charging_sessions SET currentAmps = ?, voltage = ?, totalKWh = ?, cost = ?, duration = ? WHERE evID = ? AND status = "active" ORDER BY id DESC LIMIT 1',
+          [parseFloat(currentAmps) || 0, parseFloat(voltage) || 230, parseFloat(totalKWh) || 0, cost, parseInt(duration) || 0, String(evID).trim().toUpperCase()]
+        );
+      }
+
+      return res.json({ success: true });
+    }
+
+    return res.json({ success: true });
+  } catch (e) {
+    console.error('Station status error:', e);
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ESP32 completes/stops a charging session
+app.post('/api/station/complete', async (req, res) => {
+  const { evID, sessionId, totalKWh, duration } = req.body || {};
+  if (!evID) return res.status(400).json({ error: 'evID is required' });
+
+  const costPerKWh = 12; // ₹12 per kWh
+  const cost = parseFloat(totalKWh || 0) * costPerKWh;
+
+  try {
+    if (storageMode === 'mysql' && pool) {
+      const cleanID = String(evID).trim().toUpperCase();
+
+      if (sessionId) {
+        await pool.query(
+          'UPDATE charging_sessions SET status = "completed", endTime = NOW(), totalKWh = ?, cost = ?, duration = ? WHERE id = ?',
+          [parseFloat(totalKWh) || 0, cost, parseInt(duration) || 0, sessionId]
+        );
+      } else {
+        await pool.query(
+          'UPDATE charging_sessions SET status = "completed", endTime = NOW(), totalKWh = ?, cost = ?, duration = ? WHERE evID = ? AND status = "active" ORDER BY id DESC LIMIT 1',
+          [parseFloat(totalKWh) || 0, cost, parseInt(duration) || 0, cleanID]
+        );
+      }
+
+      return res.json({ success: true, totalKWh: parseFloat(totalKWh) || 0, cost, message: 'Session completed' });
+    }
+
+    return res.json({ success: true, totalKWh: parseFloat(totalKWh) || 0, cost, message: 'Session completed (file mode)' });
+  } catch (e) {
+    console.error('Station complete error:', e);
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Website fetches charging session history for a user
+app.get('/api/station/sessions/:evID', async (req, res) => {
+  const { evID } = req.params;
+  if (!evID) return res.status(400).json({ error: 'evID is required' });
+
+  try {
+    if (storageMode === 'mysql' && pool) {
+      const [rows] = await pool.query(
+        'SELECT * FROM charging_sessions WHERE evID = ? ORDER BY startTime DESC LIMIT 50',
+        [String(evID).trim().toUpperCase()]
+      );
+      return res.json({ count: rows.length, sessions: rows });
+    }
+
+    return res.json({ count: 0, sessions: [] });
+  } catch (e) {
+    console.error('Fetch sessions error:', e);
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get currently active charging session (for website live view)
+app.get('/api/station/active', async (req, res) => {
+  try {
+    if (storageMode === 'mysql' && pool) {
+      const [rows] = await pool.query(
+        `SELECT cs.*, u.fullName, u.vehicleNumber FROM charging_sessions cs
+         LEFT JOIN users u ON cs.userId = u.id
+         WHERE cs.status = 'active' ORDER BY cs.startTime DESC`
+      );
+      return res.json({ count: rows.length, sessions: rows });
+    }
+    return res.json({ count: 0, sessions: [] });
+  } catch (e) {
+    return res.status(500).json({ error: 'Server error' });
   }
 });
 
