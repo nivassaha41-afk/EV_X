@@ -577,7 +577,7 @@ input, select, textarea { font: inherit; }
 
 /* ===================== AUTH PAGE BACKGROUND ===================== */
 body.auth-page {
-  background: linear-gradient(135deg, rgba(9, 25, 34, 0.75) 0%, rgba(15, 118, 110, 0.65) 35%, rgba(14, 165, 233, 0.55) 100%), url('../plain.jpg.png') center/cover no-repeat fixed !important;
+  background: linear-gradient(135deg, rgba(9, 25, 34, 0.60) 0%, rgba(15, 23, 42, 0.70) 100%), url('../index.jpg.jpeg') center/cover no-repeat fixed !important;
   min-height: 100vh;
   display: flex !important;
   align-items: center !important;
